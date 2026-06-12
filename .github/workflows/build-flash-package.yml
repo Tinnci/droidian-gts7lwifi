@@ -22,14 +22,19 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 avbtool device-tree-compiler
+          sudo apt-get install -y python3 device-tree-compiler python3-pycryptodome
+          # avbtool: download from AOSP (googlesource returns base64)
+          curl -sL "https://android.googlesource.com/platform/external/avb/+/refs/heads/main/avbtool.py?format=TEXT" \
+            | base64 -d | sudo tee /usr/local/bin/avbtool > /dev/null
+          sudo chmod +x /usr/local/bin/avbtool
+          avbtool version
 
       - name: Download kernel artifact
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.KERNEL_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          # Find latest run where the build job succeeded
-          RUN_ID=$(gh api repos/iridite/kernel_samsung_sm8250/actions/runs \
+          # Find latest run on the droidian branch
+          RUN_ID=$(gh api "repos/iridite/kernel_samsung_sm8250/actions/runs?branch=droidian&per_page=5" \
             --jq '[.workflow_runs[] | select(.head_branch=="droidian")] | .[0].id')
           echo "Using kernel CI run: $RUN_ID"
 
@@ -37,6 +42,7 @@ jobs:
             --jq '.artifacts[] | select(.name=="artifact") | .id')
           echo "Artifact ID: $ARTIFACT_ID"
 
+          # Download artifact (requires read access to source repo's actions)
           gh api "repos/iridite/kernel_samsung_sm8250/actions/artifacts/${ARTIFACT_ID}/zip" > kernel-artifact.zip
           unzip kernel-artifact.zip -d kernel-debs/
           ls -la kernel-debs/
@@ -73,22 +79,17 @@ jobs:
 
       - name: Build adaptation deb
         run: |
-          # dpkg-deb expects the package dir to have DEBIAN/ (uppercase)
           mkdir -p build-deb/DEBIAN
-          cp adaptation/debian/control build-deb/DEBIAN/
           cp adaptation/debian/adaptation-samsung-gts7lwifi-configs.postinst build-deb/DEBIAN/postinst
           chmod 755 build-deb/DEBIAN/postinst
 
-          # Install files according to .install manifest
           cp -a adaptation/etc build-deb/
           cp -a adaptation/usr build-deb/
 
-          # Fix permissions
           find build-deb/usr -name "*.sh" -exec chmod 755 {} \;
           chmod 755 build-deb/usr/lib/adaptation-samsung-gts7lwifi/wlan-routes-fix
           chmod 755 build-deb/etc/NetworkManager/dispatcher.d/50-wlan-routes
 
-          # Build only the -configs package (the meta package depends on kernel)
           cat > build-deb/DEBIAN/control << 'EOF'
           Package: adaptation-samsung-gts7lwifi-configs
           Version: 0.0.1
@@ -100,7 +101,6 @@ jobs:
            device flag files, hwcomposer/audio glue) for the Samsung Galaxy Tab S7
            Wi-Fi (gts7lwifi) running Droidian.
           EOF
-          # Remove leading spaces from heredoc
           sed -i 's/^          //' build-deb/DEBIAN/control
 
           dpkg-deb --build build-deb flash/adaptation-samsung-gts7lwifi-configs_0.0.1_all.deb
