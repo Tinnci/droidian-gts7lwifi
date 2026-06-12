@@ -1,0 +1,28 @@
+Source: adaptation-samsung-gts7lwifi
+Maintainer: iridite <noreply@github.com>
+Section: metapackages
+Priority: optional
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.5.0.3
+Vcs-Browser: https://github.com/iridite/adaptation-samsung-gts7lwifi
+Vcs-Git: https://github.com/iridite/adaptation-samsung-gts7lwifi.git
+
+Package: adaptation-samsung-gts7lwifi
+Architecture: all
+Depends: ${misc:Depends},
+         linux-bootimage-samsung-gts7lwifi,
+         adaptation-hybris-api30-phone,
+         adaptation-samsung-gts7lwifi-configs,
+Description: adaptation-samsung-gts7lwifi - meta
+ Samsung Galaxy Tab S7 Wi-Fi (SM-T870, codename gts7lwifi) api30
+ adaptation metapackage. Depends on the kernel bootimage, the Halium
+ hybris API-30 phone runtime, and this device's adaptation configs.
+
+Package: adaptation-samsung-gts7lwifi-configs
+Architecture: all
+Depends: ${misc:Depends},
+Description: Samsung Galaxy Tab S7 Wi-Fi (gts7lwifi)'s specific adaptation configs
+ Device-specific configuration files (udev rules, phosh compositor settings,
+ device flag files, hwcomposer/audio glue) for the Samsung Galaxy Tab S7
+ Wi-Fi (gts7lwifi) running Droidian on top of a Halium-12 / Android-11
+ vendor partition.

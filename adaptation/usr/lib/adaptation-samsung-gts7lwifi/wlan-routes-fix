@@ -1,0 +1,20 @@
+#!/bin/sh
+# gts7lwifi: NetworkManager gets the DHCP lease but often fails to install
+# the connected/default route -> "connected but no internet". Install both ourselves.
+i=0
+while [ $i -lt 30 ]; do
+  for IF in swlan0 wlp1s0 wlan0; do
+    CIDR=$(ip -4 -o addr show "$IF" 2>/dev/null | awk '/scope global/{print $4; exit}')
+    [ -z "$CIDR" ] && continue
+    GW=$(nmcli -t -f DHCP4.OPTION device show "$IF" 2>/dev/null | grep -oE ':routers = [0-9.]+' | sed 's/.*= //' | head -1)
+    NET=$(python3 -c 'import ipaddress,sys; print(ipaddress.ip_interface(sys.argv[1]).network)' "$CIDR" 2>/dev/null)
+    [ -n "$NET" ] && ip route replace "$NET" dev "$IF" src "${CIDR%/*}" 2>/dev/null
+    if [ -n "$GW" ]; then
+      ip route replace default via "$GW" dev "$IF" onlink 2>/dev/null
+      logger -t wlan-routes-fix "set $IF net=$NET via $GW"
+      exit 0
+    fi
+  done
+  i=$((i + 1)); sleep 3
+done
+exit 0

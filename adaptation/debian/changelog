@@ -1,0 +1,5 @@
+adaptation-samsung-gts7lwifi (0.0.1) trixie; urgency=medium
+
+  * Initial port from gts7xlwifi adaptation for SM-T870 (Galaxy Tab S7 Wi-Fi)
+
+ -- iridite <noreply@github.com>  Thu, 12 Jun 2026 12:00:00 +0000
