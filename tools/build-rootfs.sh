@@ -34,7 +34,8 @@ for package in linux-image-4.19-325-samsung-gts7lwifi linux-bootimage-4.19-325-s
 done
 "$ENGINE" run --rm --privileged --network host --cgroupns=host \
     -e T870_UID="$(id -u)" -e T870_GID="$(id -g)" \
-    -v /dev:/host-dev -v "$SOURCE:/buildd/sources" \
+    -v /dev:/host-dev -v /sys/fs/cgroup:/sys/fs/cgroup \
+    -v "$SOURCE:/buildd/sources" \
     "$IMAGE" /bin/bash -c '
       set -euo pipefail
       trap '\''chown -R "$T870_UID:$T870_GID" /buildd/sources'\'' EXIT
