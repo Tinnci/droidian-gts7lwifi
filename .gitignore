@@ -3,3 +3,6 @@ ci-output/
 *.zip
 gh_search.json
 elish_search.json
+out/
+__pycache__/
+*.pyc

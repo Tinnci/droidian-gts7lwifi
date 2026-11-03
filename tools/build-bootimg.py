@@ -34,7 +34,16 @@ CMDLINE_RESCUE = CMDLINE_REAL.replace("console=tty0", "console=null")
 def patch_header(path, cmdline):
     with open(path, "rb") as f:
         d = bytearray(f.read())
-    assert d[:8] == b"ANDROID!", "not an Android boot.img"
+    if len(d) < 1660 or d[:8] != b"ANDROID!":
+        raise ValueError("not an Android boot.img v2")
+    if struct.unpack_from("<I", d, 40)[0] != 2:
+        raise ValueError("only Android boot header v2 is supported")
+    page_size = struct.unpack_from("<I", d, 36)[0]
+    kernel_size = struct.unpack_from("<I", d, 8)[0]
+    if page_size != 4096 or kernel_size == 0 or page_size + kernel_size > len(d):
+        raise ValueError("invalid Samsung boot image layout")
+    if not d[page_size:page_size + kernel_size].endswith(b"SEANDROIDENFORCE"):
+        raise ValueError("kernel is missing the Samsung SEANDROIDENFORCE trailer")
     struct.pack_into("<I", d, 20, RAMDISK_ADDR)
     struct.pack_into("<I", d, 32, TAGS_ADDR)
     struct.pack_into("<I", d, 44, OS_VERSION)
@@ -43,6 +52,8 @@ def patch_header(path, cmdline):
     assert len(cb) < 512, "cmdline too long for v2 header"
     for i in range(64, 64 + 512):
         d[i] = 0
+    # v2 has another 1024 command-line bytes after the image ID.
+    d[608:1632] = b"\x00" * 1024
     d[64:64 + len(cb)] = cb
     with open(path, "wb") as f:
         f.write(bytes(d))

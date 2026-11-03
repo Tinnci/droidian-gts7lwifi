@@ -1,0 +1,102 @@
+{
+  "sources": {
+    "kernel_samsung_sm8250": {
+      "repository": "https://github.com/Tinnci/kernel_samsung_sm8250.git",
+      "upstream": "https://github.com/iridite/kernel_samsung_sm8250",
+      "commit": "7eb0630e74457b83abf224ba15d869db2786bdbf"
+    },
+    "adaptation-samsung-gts7lwifi": {
+      "repository": "https://github.com/Tinnci/adaptation-samsung-gts7lwifi.git",
+      "upstream": "https://github.com/mukahraman/adaptation-samsung-gts7xlwifi",
+      "commit": "df11c02d7143f72f581ea53395c90290e7f93fda"
+    },
+    "droidian-recipes": {
+      "repository": "https://github.com/Tinnci/droidian-recipes.git",
+      "upstream": "https://github.com/mukahraman/droidian-recipes",
+      "commit": "a9845b7cb85b8a391cdb70dc7c8b35439c88d9c5"
+    },
+    "droidian-camera": {
+      "repository": "https://github.com/Tinnci/droidian-camera.git",
+      "upstream": "https://github.com/mukahraman/droidian-camera",
+      "commit": "1efe9b2b1de5b0120193762a7f048d8c2a5192fe"
+    },
+    "rootfs-templates": {
+      "repository": "https://github.com/Tinnci/rootfs-templates.git",
+      "upstream": "https://github.com/ArchieMeng/rootfs-templates",
+      "commit": "2644fc40564692e57485be3131f1cbb96eef470b"
+    },
+    "android-image-flashing-template": {
+      "repository": "https://github.com/Tinnci/android-image-flashing-template.git",
+      "upstream": "https://github.com/droidian-releng/android-image-flashing-template",
+      "commit": "b846fa1fa3ec107e4e8675f8b82ee20bbc23866b"
+    },
+    "android-recovery-flashing-template": {
+      "repository": "https://github.com/Tinnci/android-recovery-flashing-template.git",
+      "upstream": "https://github.com/droidian-releng/android-recovery-flashing-template",
+      "commit": "2e70370d34715040d095e78c8bd6021a524a5b22"
+    },
+    "common_fragments": {
+      "repository": "https://github.com/Tinnci/common_fragments.git",
+      "upstream": "https://github.com/droidian-devices/common_fragments",
+      "commit": "ffe6901f570be9950f086a954beee6f3168cab92"
+    },
+    "linux-packaging-snippets": {
+      "repository": "https://github.com/Tinnci/linux-packaging-snippets.git",
+      "upstream": "https://github.com/droidian/linux-packaging-snippets",
+      "commit": "24c2f90e6fd4351a571ff3a2fd0aa40503046360"
+    },
+    "initramfs-tools-halium": {
+      "repository": "https://github.com/Tinnci/initramfs-tools-halium.git",
+      "upstream": "https://github.com/droidian/initramfs-tools-halium",
+      "commit": "a1c2588d25a1f748190027bbc1b8994f290ff32d"
+    },
+    "releng-tools": {
+      "repository": "https://github.com/Tinnci/releng-tools.git",
+      "upstream": "https://github.com/droidian-releng/releng-tools",
+      "commit": "0fc0a92bc79cbea9cb24333b3403a28a1c0f70cd"
+    },
+    "docker-images": {
+      "repository": "https://github.com/Tinnci/docker-images.git",
+      "upstream": "https://github.com/droidian-releng/docker-images",
+      "commit": "0799ac30a68a9f666588b85ca9902fc0b0d50134"
+    },
+    "build-snippets": {
+      "repository": "https://github.com/Tinnci/build-snippets.git",
+      "upstream": "https://github.com/droidian-releng/build-snippets",
+      "commit": "7d11be873ccadc3e3b40d7681f40e08324ac7d6f"
+    }
+  },
+  "actions": {
+    "checkout": {
+      "repository": "Tinnci/checkout",
+      "upstream": "actions/checkout",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262"
+    },
+    "upload-artifact": {
+      "repository": "Tinnci/upload-artifact",
+      "upstream": "actions/upload-artifact",
+      "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02"
+    },
+    "download-artifact": {
+      "repository": "Tinnci/download-artifact",
+      "upstream": "actions/download-artifact",
+      "commit": "d3f86a106a0bac45b974a628896c90dbdf5c8093"
+    },
+    "setup-qemu-action": {
+      "repository": "Tinnci/setup-qemu-action",
+      "upstream": "docker/setup-qemu-action",
+      "commit": "c7c53464625b32c7a7e944ae62b3e17d2b600130"
+    },
+    "action-gh-release": {
+      "repository": "Tinnci/action-gh-release",
+      "upstream": "softprops/action-gh-release",
+      "commit": "da05d552573ad5aba039eaac05058a918a7bf631"
+    }
+  },
+  "images": {
+    "build_amd64": "quay.io/droidian/build-essential@sha256:8bd1aa541d0fe4d7c6c7397d57ec20e1814fbecb11265369e74f5fb0133b3d5c",
+    "build_arm64": "quay.io/droidian/build-essential@sha256:3ea835d2568a10d6c6c026252be40d348661f840dc8239a2b7e5a3a2d222d730",
+    "rootfs_arm64": "quay.io/droidian/rootfs-builder@sha256:e489989b8260756c1d64886c31eb7af202c4ab7c3aa682184ea89715fe32cd06",
+    "rootfs_amd64": "quay.io/droidian/rootfs-builder@sha256:27a41f9f45d0d080ea44b60cdc8bb4e5936c9cb51adffd7e2c8c62e28d33c2d7"
+  }
+}

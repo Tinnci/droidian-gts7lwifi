@@ -1,87 +1,104 @@
 #!/usr/bin/env python3
-"""
-make-touchpad-dtbo.py — produce the gts7lwifi dtbo with Book Cover Keyboard
-trackpad orientation fixed for Droidian's landscape coordinate system.
+"""Validate/fix every T870 touchpad overlay and sign the Android DTBO table."""
+import argparse
+import os
+from pathlib import Path
+import re
+import struct
+import subprocess
+import tempfile
 
-Patches touchpad,invert = <0 1 1> -> <0 0 0> in every board-revision FDT,
-then re-adds AVB hash footer so Samsung ABL accepts it under vbmeta flags=0x02.
-
-Usage:
-  python3 make-touchpad-dtbo.py <stock_dtbo.img> <out_dtbo.img> [--key testkey_rsa4096.pem]
-
-Requires: dtc, avbtool in PATH; testkey next to this script (or via --key).
-"""
-import struct, subprocess, sys, os, argparse, tempfile
-
-OLD = "touchpad,invert = <0x00 0x01 0x01>"
-NEW = "touchpad,invert = <0x00 0x00 0x00>"
-PART_SIZE = 10485760  # gts7lwifi dtbo partition size (same as T970)
+PART_SIZE = 10485760
+PROPERTY = re.compile(r"(touchpad,invert\s*=\s*)<([^>]+)>(\s*;)")
 
 
-def align(x, a=4096):
-    return (x + a - 1) // a * a
+def align(value, page):
+    return (value + page - 1) // page * page
+
+
+def patch_dts(dts):
+    matches = list(PROPERTY.finditer(dts))
+    if not matches:
+        raise ValueError("overlay has no touchpad,invert property")
+    changed = 0
+
+    def replace(match):
+        nonlocal changed
+        values = [int(cell, 0) for cell in match[2].split()]
+        if values == [0, 0, 0]:
+            return match[0]
+        if values != [0, 1, 1]:
+            raise ValueError(f"unexpected touchpad,invert: {values}")
+        changed += 1
+        return f"{match[1]}<0x00 0x00 0x00>{match[3]}"
+
+    return PROPERTY.sub(replace, dts), changed
+
+
+def patch_table(data, work):
+    if len(data) < 32:
+        raise ValueError("truncated DTBO header")
+    magic, total, hsz, esz, count, eoff, page, version = struct.unpack_from(">8I", data)
+    if (magic != 0xD7B7AB1E or hsz != 32 or esz < 32 or not count
+            or eoff < hsz or page not in (2048, 4096) or version != 0
+            or eoff + count * esz > total or total > len(data)):
+        raise ValueError("invalid Android DTBO table")
+    entries, blobs, changed, ready = [], [], 0, 0
+    for index in range(count):
+        entry = data[eoff + index * esz:eoff + (index + 1) * esz]
+        size, offset = struct.unpack_from(">2I", entry)
+        if offset < eoff + count * esz or offset + size > total or size < 40:
+            raise ValueError(f"overlay {index} exceeds DTBO table bounds")
+        blob = data[offset:offset + size]
+        source = work / f"{index}.dtb"
+        source.write_bytes(blob)
+        result = subprocess.run(["dtc", "-I", "dtb", "-O", "dts", str(source)],
+                                check=True, capture_output=True, text=True)
+        dts, edits = patch_dts(result.stdout)
+        if edits:
+            output = work / f"{index}-fixed.dtb"
+            subprocess.run(["dtc", "-I", "dts", "-O", "dtb", "-o", str(output)],
+                           input=dts, check=True, capture_output=True, text=True)
+            blob = output.read_bytes()
+            changed += 1
+        else:
+            ready += 1
+        entries.append(entry[8:])
+        blobs.append(blob)
+    offset = align(eoff + count * esz, page)
+    table, body = bytearray(), bytearray()
+    for metadata, blob in zip(entries, blobs):
+        table += struct.pack(">2I", len(blob), offset) + metadata
+        padded = align(len(blob), page)
+        body += blob + b"\x00" * (padded - len(blob))
+        offset += padded
+    header = struct.pack(">8I", magic, offset, hsz, esz, count, eoff, page, version)
+    output = header + data[hsz:eoff] + table
+    output += b"\x00" * (align(len(output), page) - len(output)) + body
+    return output, changed, ready
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("stock")
-    ap.add_argument("out")
-    ap.add_argument("--key", default=os.path.join(os.path.dirname(__file__), "..", "testkey_rsa4096.pem"))
-    a = ap.parse_args()
-    d = open(a.stock, "rb").read()
-    magic, total, hsz, esz, ecnt, eoff, psz, ver = struct.unpack(">IIIIIIII", d[:32])
-    assert magic == 0xd7b7ab1e, "not an Android dt_table dtbo"
-    ents = [
-        struct.unpack(">II", d[eoff + i * esz: eoff + i * esz + 8])
-        + (d[eoff + i * esz + 8: eoff + i * esz + esz],)
-        for i in range(ecnt)
-    ]
-    tmp = tempfile.mkdtemp()
-    new, changed = [], 0
-    for i, (sz, off, rest) in enumerate(ents):
-        fdt = d[off:off + sz]
-        fi = os.path.join(tmp, f"i{i}.dtb")
-        open(fi, "wb").write(fdt)
-        dts = subprocess.run(
-            ["dtc", "-I", "dtb", "-O", "dts", fi], capture_output=True
-        ).stdout.decode("utf-8", "replace")
-        if OLD in dts:
-            dts = dts.replace(OLD, NEW)
-            changed += 1
-            fo = os.path.join(tmp, f"o{i}.dtb")
-            subprocess.run(
-                ["dtc", "-I", "dts", "-O", "dtb", "-o", fo],
-                input=dts.encode(),
-                capture_output=True,
-            )
-            new.append(open(fo, "rb").read())
-        else:
-            new.append(fdt)
-    he = 32 + ecnt * esz
-    cur = align(he)
-    eb = bytearray()
-    fa = bytearray()
-    for i, fdt in enumerate(new):
-        eb += struct.pack(">II", len(fdt), cur) + ents[i][2]
-        fa += fdt + b"\x00" * (align(len(fdt)) - len(fdt))
-        cur += align(len(fdt))
-    out = struct.pack(">IIIIIIII", magic, cur, hsz, esz, ecnt, eoff, psz, ver) + eb
-    out += b"\x00" * (align(he) - len(out))
-    out += fa
-    open(a.out, "wb").write(out)
-    subprocess.run(
-        [
-            "avbtool", "add_hash_footer",
-            "--image", a.out,
-            "--partition_name", "dtbo",
-            "--partition_size", str(PART_SIZE),
-            "--algorithm", "SHA256_RSA4096",
-            "--key", a.key,
-            "--rollback_index", "0",
-        ],
-        check=True,
-    )
-    print(f"OK: {a.out}  (patched {changed} FDTs, signed, {os.path.getsize(a.out)} bytes)")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("stock", type=Path)
+    parser.add_argument("out", type=Path)
+    parser.add_argument("--key", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "testkey_rsa4096.pem")
+    args = parser.parse_args()
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="dtbo-", dir=args.out.parent) as directory:
+        work = Path(directory)
+        data, changed, ready = patch_table(args.stock.read_bytes(), work)
+        image = work / "dtbo.img"
+        image.write_bytes(data)
+        subprocess.run(["avbtool", "add_hash_footer", "--image", str(image),
+                        "--partition_name", "dtbo", "--partition_size", str(PART_SIZE),
+                        "--algorithm", "SHA256_RSA4096", "--key", str(args.key),
+                        "--rollback_index", "0"], check=True)
+        subprocess.run(["avbtool", "verify_image", "--image", str(image),
+                        "--key", str(args.key)], check=True)
+        os.replace(image, args.out)
+    print(f"OK: {args.out}: {changed} overlays patched, {ready} already correct")
 
 
 if __name__ == "__main__":

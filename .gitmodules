@@ -1,0 +1,3 @@
+[submodule "adaptation"]
+	path = adaptation
+	url = https://github.com/Tinnci/adaptation-samsung-gts7lwifi.git

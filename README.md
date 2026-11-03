@@ -1,70 +1,89 @@
-# Droidian Port for Samsung Galaxy Tab S7 Wi-Fi (SM-T870 / gts7lwifi)
+# Droidian for Galaxy Tab S7 Wi-Fi (SM-T870)
 
-Ported from [mukahraman/galaxy-tab-s7-plus-droidian](https://github.com/mukahraman/galaxy-tab-s7-plus-droidian) (SM-T970 / gts7xlwifi).
+T870 device build maintained under [Tinnci](https://github.com/Tinnci).
+The source forks, Actions commits and bootstrap image digests are fixed in
+[`dependencies.lock.json`](dependencies.lock.json).
 
-## Quick Start
+The port uses the Samsung/LineageOS 4.19 kernel, Halium API 30, Debian and Phosh.
+The hardware target is **SM-T870 / gts7lwifi**. S7+ (T970) images use a different
+panel and device tree.
 
-### 1. Fork & Patch Kernel
-```bash
-gh repo fork mukahraman/kernel_samsung_sm8250 --clone
-cd kernel_samsung_sm8250
-git checkout droidian
-cp /path/to/tabs7-roms/kernel-patches/kernel-info.mk debian/kernel-info.mk
-cp /path/to/tabs7-roms/kernel-patches/extra.config droidian/extra.config
-git add -A && git commit -m "Port to gts7lwifi (SM-T870)"
-git push origin droidian
-# GitHub Actions will build linux-bootimage-*-samsung-gts7lwifi.deb
+## Build locally
+
+Initialize the adaptation submodule:
+
+```sh
+git clone --recurse-submodules https://github.com/Tinnci/droidian-gts7lwifi.git
+cd droidian-gts7lwifi
 ```
 
-### 2. Build Adaptation Package
-```bash
-cd /path/to/tabs7-roms/adaptation
-dpkg-buildpackage -us -uc -b
-# Or push to GitHub and let Droidian CI build it
+Build the kernel on an x86_64 Linux/WSL host with Docker or Podman:
+
+```sh
+BUILD_JOBS=8 tools/build-kernel.sh
+# For rootless Podman: CONTAINER_ENGINE=podman BUILD_JOBS=8 tools/build-kernel.sh
 ```
 
-### 3. Flash
-See [docs/FLASH-GUIDE.md](docs/FLASH-GUIDE.md) for the full step-by-step.
+This builds our container overlay, compiles the kernel, and produces Debian
+packages in `out/kernel/`. It uses our forks of the kernel configuration
+fragments, packaging snippets and release tools. The compiler and generic
+Halium initramfs are distro packages; their exact versions are recorded in
+`.buildinfo`. Their closest source/build repositories are also forked for
+maintenance. Bootstrap containers are pinned by digest.
 
-## Project Structure
+Install host packaging dependencies (Debian/Ubuntu), then build the flash bundle:
 
-```
-tabs7-roms/
-├── README.md
-├── RESOURCES.md              # Full resource inventory & links
-├── kernel-patches/
-│   ├── kernel-info.mk        # Drop-in replacement for debian/kernel-info.mk
-│   └── extra.config          # Droidian kconfig fragment (drop into droidian/)
-├── adaptation/               # Full adaptation-samsung-gts7lwifi Debian package
-│   ├── debian/
-│   ├── etc/                  # udev, phosh, pulse, libinput, bluetooth configs
-│   └── usr/                  # scripts, device flags, audio HAL overlay
-├── tools/
-│   ├── build-bootimg.py      # Patch boot.img header + AVB footer for T870
-│   └── make-touchpad-dtbo.py # Fix Book Cover trackpad orientation
-└── docs/
-    └── FLASH-GUIDE.md        # Complete flashing instructions
+```sh
+sudo apt-get install debhelper device-tree-compiler avbtool python3-pycryptodome
+python3 tools/build-flash-package.py \
+  --kernel-deb out/kernel/linux-bootimage-4.19-325-samsung-gts7lwifi_*.deb
 ```
 
-## What's Different from T970 Port
+The output contains boot and rescue images, DTBO, vbmeta, both adaptation
+packages, `build-manifest.json` and `SHA256SUMS`. It verifies image signatures,
+DTBO properties and required adaptation payloads before copying the output.
+An existing kernel `.deb` can also be passed to the same command.
 
-| Area | Change |
-|------|--------|
-| kernel-info.mk | DEVICE_MODEL, cmdline buildproduct, DTBO path, FLASH_INFO |
-| extra.config | Comment header only (all kconfig identical) |
-| phoc.ini | Scale comment (2560x1600 vs 2800x1752) |
-| libinput quirks | S-Pen resolution 97x97 (vs 100x100 for larger panel) |
-| debian/ | Package names gts7xlwifi → gts7lwifi |
-| Partition sizes | boot=71303168 (same), dtbo=10485760 (same) |
+Build the camera package on an arm64 host, or use the native arm64 CI job:
 
-## Status
+```sh
+tools/build-camera.sh
+```
 
-- [x] Kernel config verified (gts7lwifi.config exists in upstream)
-- [x] Device tree overlays verified (kona-sec-gts7lwifi-eur-overlay-r02..r07)
-- [x] TWRP available (ShionKanagawa/android_device_samsung_gts7lwifi-twrp)
-- [x] Vendor blobs available (TheMuppets/proprietary_vendor_samsung_gts7lwifi)
-- [x] Audio ACDB calibration available (in vendor blobs)
-- [ ] First boot (pending hardware flash)
-- [ ] Touch verification
-- [ ] Audio verification
-- [ ] Camera verification
+To build the LVM userdata image, collect the kernel packages, both adaptation
+packages and camera package in one directory, then run:
+
+```sh
+tools/build-rootfs.sh /absolute/path/to/packages
+```
+
+The rootfs builder supports native arm64 and x86_64 with binfmt emulation.
+It needs privileged container access for debootstrap, loop devices and LVM.
+The image includes the device packages before first boot. The base system uses
+Droidian's `current` snapshot; `.buildinfo` and the dependency lock record the
+build inputs, while the distro archive remains an external dependency.
+
+## CI and maintenance
+
+Run **Build T870 from source** in Actions. A normal source push builds the kernel
+and verified flash bundle. Manual dispatch with `rootfs=true` also builds the
+camera and userdata image on native arm64 runners. All active Actions come from
+Tinnci forks and use full commit hashes. No GitHub Pages setup is required.
+
+[`adaptation/`](adaptation/) is a pinned submodule of
+[Tinnci/adaptation-samsung-gts7lwifi](https://github.com/Tinnci/adaptation-samsung-gts7lwifi).
+Change device configuration there, then update this submodule and the dependency
+lock together. Change other source pins explicitly after reviewing their diffs.
+The kernel signing helpers are mirrored under `debian/samsung` in the kernel
+fork; update both copies together.
+
+See [the build comparison](docs/BUILD-COMPARISON.md),
+[dependency inventory](docs/DEPENDENCIES.md), and
+[flash instructions](QUICK-FLASH.md).
+
+## Hardware status
+
+The inherited T870 port has not recorded a successful first boot. Local/CI
+build verification covers generated files and package contents. T870 display,
+touch, S-Pen, audio, Wi-Fi, suspend and charging still need device testing.
+The original S7+ port and history remain linked in the dependency inventory.

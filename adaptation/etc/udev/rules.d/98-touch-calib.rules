@@ -1,3 +1,0 @@
-# gts7lwifi: rotate the touchscreen to match the locked-landscape phosh output.
-# Matrix "0 1 0 -1 0 1" maps panel (portrait-native) -> landscape.
-ACTION=="add|change", SUBSYSTEM=="input", ATTRS{name}=="sec_touchscreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"

@@ -1,3 +1,0 @@
-# Tab S7 (gts7lwifi): the sec_e-pen Wacom digitizer reports in the panel's native
-# (portrait) orientation. Apply the same rotation matrix as the touchscreen.
-ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="sec_e-pen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
