@@ -1,0 +1,44 @@
+name: Rebuild T870 rootfs from packages
+on:
+  workflow_dispatch:
+    inputs:
+      packages_run:
+        description: Run ID containing kernel-packages, camera-packages and t870-flash
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  rootfs:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: Tinnci/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: python3 tools/check-dependencies.py
+      - uses: Tinnci/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: kernel-packages
+          path: out/packages
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.packages_run }}
+      - uses: Tinnci/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: camera-packages
+          path: out/packages
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.packages_run }}
+      - uses: Tinnci/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: t870-flash
+          path: out/packages
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.packages_run }}
+      - run: tools/build-rootfs.sh out/packages
+      - uses: Tinnci/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: t870-rootfs
+          path: out/rootfs/images/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30

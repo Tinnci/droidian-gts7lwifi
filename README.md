@@ -69,6 +69,9 @@ Run **Build T870 from source** in Actions. A normal source push builds the kerne
 and verified flash bundle. Manual dispatch with `rootfs=true` also builds the
 camera and userdata image on native arm64 runners. All active Actions come from
 Tinnci forks and use full commit hashes. No GitHub Pages setup is required.
+Use **Rebuild T870 rootfs from packages** with an existing run ID when only
+the rootfs recipe needs rebuilding; this reuses its kernel, camera and
+adaptation artifacts.
 
 [`adaptation/`](adaptation/) is a pinned submodule of
 [Tinnci/adaptation-samsung-gts7lwifi](https://github.com/Tinnci/adaptation-samsung-gts7lwifi).
