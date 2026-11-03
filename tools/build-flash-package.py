@@ -82,6 +82,7 @@ def main():
             "kernel_sha256": hashlib.sha256(args.kernel_deb.read_bytes()).hexdigest(),
             "kernel_version": field(args.kernel_deb, "Version"),
             "source_commit": subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
+            "source_dirty": bool(subprocess.check_output(["git", "-C", str(ROOT), "status", "--porcelain"], text=True).strip()),
             "adaptation_commit": subprocess.check_output(["git", "-C", str(ROOT / "adaptation"), "rev-parse", "HEAD"], text=True).strip(),
         }
         lock = ROOT / "dependencies.lock.json"

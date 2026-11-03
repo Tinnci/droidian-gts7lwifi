@@ -6,6 +6,9 @@ OUTPUT=${1:-"$ROOT/out/camera"}
 mkdir -p "$OUTPUT"
 OUTPUT=$(realpath "$OUTPUT")
 ENGINE=${CONTAINER_ENGINE:-docker}
+JOBS=${BUILD_JOBS:-4}
+[[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "BUILD_JOBS must be a positive integer" >&2; exit 1; }
+if [ "$JOBS" -gt "$(nproc)" ]; then JOBS=$(nproc); fi
 python3 "$ROOT/tools/fetch-dependencies.py" --destination "$OUTPUT/sources" --only \
     droidian-camera linux-packaging-snippets releng-tools docker-images
 mkdir -p "$OUTPUT/builder-context"
@@ -15,7 +18,7 @@ done
 IMAGE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["images"]["build_arm64"])' "$ROOT/dependencies.lock.json")
 "$ENGINE" build --network host -t t870-camera-builder --build-arg BASE_IMAGE="$IMAGE" \
     -f "$OUTPUT/sources/docker-images/Dockerfile.t870-builder" "$OUTPUT/builder-context"
-"$ENGINE" run --rm --network host --cpus "${BUILD_JOBS:-4}" \
+"$ENGINE" run --rm --network host --cpus "$JOBS" \
     -e T870_UID="$(id -u)" -e T870_GID="$(id -g)" \
     -v "$OUTPUT:/build" t870-camera-builder /bin/bash -c '
       set -euo pipefail

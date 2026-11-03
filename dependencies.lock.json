@@ -64,6 +64,11 @@
       "repository": "https://github.com/Tinnci/build-snippets.git",
       "upstream": "https://github.com/droidian-releng/build-snippets",
       "commit": "7d11be873ccadc3e3b40d7681f40e08324ac7d6f"
+    },
+    "galaxy-tab-s7-plus-droidian": {
+      "repository": "https://github.com/Tinnci/galaxy-tab-s7-plus-droidian.git",
+      "upstream": "https://github.com/mukahraman/galaxy-tab-s7-plus-droidian",
+      "commit": "a5a12a76d344b015368238b8f50464a1e57b718d"
     }
   },
   "actions": {

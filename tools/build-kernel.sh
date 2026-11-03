@@ -5,6 +5,9 @@ OUTPUT=${1:-"$ROOT/out/kernel"}
 mkdir -p "$OUTPUT"
 OUTPUT=$(realpath "$OUTPUT")
 ENGINE=${CONTAINER_ENGINE:-docker}
+JOBS=${BUILD_JOBS:-8}
+[[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "BUILD_JOBS must be a positive integer" >&2; exit 1; }
+if [ "$JOBS" -gt "$(nproc)" ]; then JOBS=$(nproc); fi
 python3 "$ROOT/tools/fetch-dependencies.py" --destination "$OUTPUT/sources" --only \
     kernel_samsung_sm8250 linux-packaging-snippets releng-tools docker-images
 SOURCE="$OUTPUT/sources/kernel_samsung_sm8250"
@@ -15,8 +18,8 @@ for dependency in linux-packaging-snippets releng-tools; do
 done
 "$ENGINE" build --network host -t t870-kernel-builder \
     -f "$OUTPUT/sources/docker-images/Dockerfile.t870-builder" "$OUTPUT/builder-context"
-"$ENGINE" run --rm --network host --cpus "${BUILD_JOBS:-8}" \
-    -e RELENG_JOBS="${BUILD_JOBS:-8}" \
+"$ENGINE" run --rm --network host --cpus "$JOBS" \
+    -e RELENG_JOBS="$JOBS" \
     -e T870_UID="$(id -u)" -e T870_GID="$(id -g)" \
     -v "$OUTPUT:/build" t870-kernel-builder /bin/bash -c '
       set -euo pipefail

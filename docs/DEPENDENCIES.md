@@ -5,6 +5,7 @@ The complete exact revision inventory is in `../dependencies.lock.json`.
 | Tinnci repository | Upstream | Purpose |
 |---|---|---|
 | droidian-gts7lwifi | iridite/droidian-gts7lwifi | Device coordinator, build scripts and CI |
+| galaxy-tab-s7-plus-droidian | mukahraman/galaxy-tab-s7-plus-droidian | Preserve the original port status, signing tools and bring-up guide |
 | kernel_samsung_sm8250 | iridite/kernel_samsung_sm8250; mukahraman/kernel_samsung_sm8250 | T870 kernel and Samsung image packaging |
 | adaptation-samsung-gts7lwifi | mukahraman/adaptation-samsung-gts7xlwifi | T870 configuration package, audio and services |
 | droidian-recipes | mukahraman/droidian-recipes | Device image recipe |
