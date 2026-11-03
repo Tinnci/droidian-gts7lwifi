@@ -1,21 +1,41 @@
-name: Rebuild T870 rootfs from packages
+name: Package and rebuild T870 rootfs
 on:
   workflow_dispatch:
     inputs:
       packages_run:
-        description: Run ID containing kernel-packages, camera-packages and t870-flash
+        description: Run ID containing successful kernel-packages and camera-packages
         type: string
         required: true
 permissions:
   contents: read
   actions: read
 jobs:
+  flash:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: Tinnci/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          submodules: recursive
+      - run: python3 tools/check-dependencies.py
+      - uses: Tinnci/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: kernel-packages
+          path: out/kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.packages_run }}
+      - run: tools/build-flash-in-container.sh out/kernel out/flash
+      - uses: Tinnci/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: t870-flash
+          path: out/flash
+          if-no-files-found: error
+          retention-days: 30
   rootfs:
+    needs: flash
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     steps:
       - uses: Tinnci/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - run: python3 tools/check-dependencies.py
       - uses: Tinnci/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: kernel-packages
@@ -32,8 +52,6 @@ jobs:
         with:
           name: t870-flash
           path: out/packages
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.packages_run }}
       - run: tools/build-rootfs.sh out/packages
       - uses: Tinnci/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

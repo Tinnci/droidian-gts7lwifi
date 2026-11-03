@@ -31,13 +31,16 @@ Halium initramfs are distro packages; their exact versions are recorded in
 `.buildinfo`. Their closest source/build repositories are also forked for
 maintenance. Bootstrap containers are pinned by digest.
 
-Install host packaging dependencies (Debian/Ubuntu), then build the flash bundle:
+Build the flash bundle in the pinned Droidian container:
 
 ```sh
-sudo apt-get install debhelper device-tree-compiler avbtool python3-pycryptodome
-python3 tools/build-flash-package.py \
-  --kernel-deb out/kernel/linux-bootimage-4.19-325-samsung-gts7lwifi_*.deb
+tools/build-flash-in-container.sh out/kernel out/flash
 ```
+
+Ubuntu 24.04 does not provide `avbtool` in its standard package archive. The
+container installs it from the Droidian archive. With the required tools
+already installed, the direct `tools/build-flash-package.py --kernel-deb ...`
+entry point is also available.
 
 The output contains boot and rescue images, DTBO, vbmeta, both adaptation
 packages, `build-manifest.json` and `SHA256SUMS`. It verifies image signatures,
@@ -69,9 +72,8 @@ Run **Build T870 from source** in Actions. A normal source push builds the kerne
 and verified flash bundle. Manual dispatch with `rootfs=true` also builds the
 camera and userdata image on native arm64 runners. All active Actions come from
 Tinnci forks and use full commit hashes. No GitHub Pages setup is required.
-Use **Rebuild T870 rootfs from packages** with an existing run ID when only
-the rootfs recipe needs rebuilding; this reuses its kernel, camera and
-adaptation artifacts.
+Use **Package and rebuild T870 rootfs** with an existing run ID to reuse
+its kernel and camera packages and regenerate the flash bundle and rootfs.
 
 [`adaptation/`](adaptation/) is a pinned submodule of
 [Tinnci/adaptation-samsung-gts7lwifi](https://github.com/Tinnci/adaptation-samsung-gts7lwifi).

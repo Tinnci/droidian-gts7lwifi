@@ -57,12 +57,8 @@ jobs:
         with:
           name: kernel-packages
           path: out/kernel
-      - name: Install packaging tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y debhelper device-tree-compiler avbtool python3-pycryptodome
-      - name: Build and verify flash package
-        run: python3 tools/build-flash-package.py --kernel-deb out/kernel/linux-bootimage-4.19-325-samsung-gts7lwifi_*.deb
+      - name: Build and verify flash package in Droidian
+        run: tools/build-flash-in-container.sh out/kernel out/flash
       - uses: Tinnci/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: t870-flash
